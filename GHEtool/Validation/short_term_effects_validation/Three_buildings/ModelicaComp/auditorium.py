@@ -18,7 +18,9 @@ import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
-import git
+
+import sys
+sys.path.append("C:\Workdir\Develop\ghetool")
 
 from GHEtool import *
 
