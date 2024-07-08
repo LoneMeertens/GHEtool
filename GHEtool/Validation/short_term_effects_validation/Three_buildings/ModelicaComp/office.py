@@ -225,7 +225,7 @@ def Office():
 
     ### Case 3 - Temperature gradient in ground = 3 K/100m
 
-    ground_data = GroundTemperatureGradient(k_s=3, T_g=10, volumetric_heat_capacity= 2.4 * 10**6, gradient=3)
+    ground_data = GroundTemperatureGradient(k_s=3, T_g=10, volumetric_heat_capacity= 2.4 * 10**6, gradient=2.2)
 
     # initiate borefield
     borefield = Borefield()

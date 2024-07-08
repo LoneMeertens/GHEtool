@@ -135,7 +135,7 @@ def Auditorium():
     L4_ste_cst_stop = time.time()
     Tg_L4_ste_cst = borefield._Tg(depth_L4_ste_cst)
 
-    """
+    
     ### Case 2 - Temperature gradient in ground = 1 K/100m
 
     ground_data = GroundTemperatureGradient(k_s=3, T_g=10, volumetric_heat_capacity= 2.4 * 10**6, gradient=1)
@@ -225,7 +225,7 @@ def Auditorium():
 
     ### Case 3 - Temperature gradient in ground = 3 K/100m
 
-    ground_data = GroundTemperatureGradient(k_s=3, T_g=10, volumetric_heat_capacity= 2.4 * 10**6, gradient=3)
+    ground_data = GroundTemperatureGradient(k_s=3, T_g=10, volumetric_heat_capacity= 2.4 * 10**6, gradient=2.2)
 
     # initiate borefield
     borefield = Borefield()
@@ -310,7 +310,7 @@ def Auditorium():
     L4_ste_gradient_3_stop = time.time()
     Tg_L4_ste_gradient_3 = borefield._Tg(depth_L4_ste_gradient_3)
 
-    """
+    
     ### Case 4 - Temperature flux in ground
 
     ## GHEtool L4
@@ -411,7 +411,7 @@ def Auditorium():
     print(
         f"The sizing according to L4 (including ste) has a depth of {depth_L4_ste_cst:.2f}m (using dynamic Rb* of {Rb_L4_ste_cst:.3f}), Tg equals {Tg_L4_ste_cst} °C and time needed for sizing was {L4_ste_cst_stop-L4_ste_cst_start:.2f}s")
     
-    """
+    
     print('Case 2 - Temperature gradient in ground = 1 K/100m')
     print(
         f"The sizing according to L4 has a depth of {depth_L4_gradient_1:.2f}m (using dynamic Rb* of {Rb_L4_gradient_1:.3f}), Tg equals {Tg_L4_gradient_1} °C and time needed for sizing was {L4_gradient_1_stop-L4_gradient_1_start:.2f}s")
@@ -422,7 +422,7 @@ def Auditorium():
         f"The sizing according to L4 has a depth of {depth_L4_gradient_3:.2f}m (using dynamic Rb* of {Rb_L4_gradient_3:.3f}), Tg equals {Tg_L4_gradient_3} °C and time needed for sizing was {L4_gradient_3_stop-L4_gradient_3_start:.2f}s")
     print(
         f"The sizing according to L4 (including ste) has a depth of {depth_L4_ste_gradient_3:.2f}m (using dynamic Rb* of {Rb_L4_ste_gradient_3:.3f}), Tg equals {Tg_L4_ste_gradient_3} °C and time needed for sizing was {L4_ste_gradient_3_stop-L4_ste_gradient_3_start:.2f}s")
-    """
+    
     
     print('Case 4 - Temperature flux in ground')
     print(
