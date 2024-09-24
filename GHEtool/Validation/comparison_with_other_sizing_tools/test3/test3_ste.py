@@ -41,10 +41,10 @@ def test_3_6h_ste():
     # load the hourly profile
     load = HourlyGeothermalLoad(simulation_period=10)
     load.load_hourly_profile(os.path.join(os.path.dirname(__file__), 'test3.csv'), header=True, separator=",",
-                             col_heating=1, col_cooling=0)
+                             col_extraction=1, col_injection=0)
     borefield.load = load
 
-    delta_t = max(load.max_peak_cooling, load.max_peak_cooling) * 1000 / (fluid_data.Cp * fluid_data.mfr) / 49
+    delta_t = max(load.max_peak_injection, load.max_peak_extraction) * 1000 / (fluid_data.Cp * fluid_data.mfr) / 49
 
     # set temperature bounds
     borefield.set_max_avg_fluid_temperature(35 + delta_t / 2)
@@ -95,7 +95,6 @@ def test_3_6h_ste():
     }
 
     options = {'nSegments': 12,
-                   'segment_ratios': None,
                    'disp': False,
                    'profiles': True,
                    'method': 'equivalent',
@@ -140,7 +139,7 @@ def test_3_6h_ste():
 
             load = HourlyGeothermalLoad(simulation_period=s)
             load.load_hourly_profile(os.path.join(os.path.dirname(__file__), 'test3.csv'), header=True, separator=",",
-                             col_heating=1, col_cooling=0)
+                             col_extraction=1, col_injection=0)
             borefield.load = load
 
             # Sizing with constant Rb
@@ -192,7 +191,6 @@ def test_3_6h_ste():
             }
 
             options = {'nSegments': 12,
-                   'segment_ratios': None,
                    'disp': False,
                    'profiles': True,
                    'method': 'equivalent',

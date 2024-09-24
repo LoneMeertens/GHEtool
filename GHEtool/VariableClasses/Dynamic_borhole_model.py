@@ -53,22 +53,16 @@ class DynamicsBH(object):
         if number_of_boreholes == 1:
             self.fluid_factor = 1
         else:
-            self.fluid_factor = 2
+            self.fluid_factor = 3
 
         # number of pipes
         # 1 for single U tube, 2 for dubble U tube (not possible yet) 
         self.u_tube = self.pipes_ghe.number_of_pipes
 
-        #To do: extend numerical model to be able to handle double u-tubes
-        if self.u_tube == 2:
-            ghe_logger.warning(f"Double u-tube is considered, while model only handles single u-tube, results will be incorrect")
-
-        
-
         # Calculate the far field radius, which influences the number of ground cells
         # To do: only works for rectangular field, adjust for more general approaches
         if number_of_boreholes == 0:
-            print('Error: no borefield has been initiated')
+            ghe_logger.warning(f"Borefield should consist of at least one borehole")
         elif number_of_boreholes < 4:
             far_field_radius = 10
         else: 
@@ -84,9 +78,9 @@ class DynamicsBH(object):
         short_term_parameters = ShortTermEffectsParameters(**short_term_effects_parameters)
         self.short_term_parameters = short_term_parameters
 
-        self.factor_time = 50 # parameter to modify final time 
-        self.rho_cp_grout = self.short_term_parameters.rho_cp_grout  # Sandbox
-        self.rho_cp_pipe = self.short_term_parameters.rho_cp_pipe  # not aan te passen voor sandbox
+        self.factor_time = 50 # parameter to modify default final time 
+        self.rho_cp_grout = self.short_term_parameters.rho_cp_grout  
+        self.rho_cp_pipe = self.short_term_parameters.rho_cp_pipe  
         
         # Starting Rb, needs to be updated every iteration
         self.resist_bh_effective = self.borefield.Rb
@@ -94,12 +88,21 @@ class DynamicsBH(object):
         # "The one dimensional model has a fluid core, an equivalent convective
         # resistance layer, a tube layer, a grout layer and is surrounded by the
         # ground."
-
+        if self.u_tube == 1:
         # cell numbers
-        self.num_fluid_cells = 3
-        self.num_conv_cells = 1
-        self.num_pipe_cells = 4
-        self.num_grout_cells = 27
+            self.num_fluid_cells = 3
+            self.num_conv_cells = 1
+            self.num_pipe_cells = 4
+            self.num_grout_cells = 27
+
+        elif self.u_tube == 2:
+            self.num_fluid_cells = 12
+            self.num_conv_cells = 4
+            self.num_pipe_cells = 16
+            self.num_grout_cells = 20
+        else:
+            ghe_logger.warning(f"Choose for single or double U-tube")
+
 
         self.num_cells = self.num_fluid_cells + self.num_conv_cells + self.num_pipe_cells
         self.num_cells += self.num_grout_cells + self.num_soil_cells
@@ -116,25 +119,46 @@ class DynamicsBH(object):
         # borehole radius is set to the actual radius of the borehole
         self.r_borehole = self.boreholes[0].r_b
 
+        # pipe thickness
+        self.thickness_pipe_actual = self.pipes_ghe.r_out - self.pipes_ghe.r_in
+
         # outer tube radius is set to sqrt(2) * r_p_o, tube region has 4 cells
-        self.r_out_tube = sqrt(2 * self.u_tube) * self.pipes_ghe.r_out
+        if self.u_tube == 1:
+            # outer tube radius is set to sqrt(2) * r_p_o, tube region has 4 cells
+            self.r_out_tube = sqrt(2) * self.pipes_ghe.r_out
+            # inner tube radius is set to r_out_tube-t_p
+            self.r_in_tube = self.r_out_tube - self.thickness_pipe_actual
+            # r_in_convection is set to r_in_tube - 1/4 * t
+            self.r_in_convection = self.r_in_tube - self.thickness_pipe_actual / 4.0
+            # r_fluid is set to r_in_convection - 3/4 * t
+            self.r_fluid = self.r_in_convection - (3.0 / 4.0 * self.thickness_pipe_actual)
+            # Thicknesses of the grid regions
+            self.thickness_soil_cell = (self.r_far_field - self.r_borehole) / self.num_soil_cells
+            self.thickness_grout_cell = (self.r_borehole - self.r_out_tube) / self.num_grout_cells
+            # pipe thickness is equivalent to original tube thickness
+            self.thickness_conv_cell = (self.r_in_tube - self.r_in_convection) / self.num_conv_cells
+            self.thickness_fluid_cell = (self.r_in_convection - self.r_fluid) / self.num_fluid_cells
+            # Fixing error of thickness pipe cells, divide by number of pipe cells
+            self.thickness_pipe_cell = self.thickness_pipe_actual / self.num_pipe_cells
+            ghe_logger.info(f"Single U-tube cells defined for numerical model")
 
-        # inner tube radius is set to r_out_tube-t_p
-        self.thickness_pipe = self.pipes_ghe.r_out - self.pipes_ghe.r_in
-        self.r_in_tube = self.r_out_tube - self.thickness_pipe
-
-        # r_in_convection is set to r_in_tube - 1/4 * t
-        self.r_in_convection = self.r_in_tube - self.thickness_pipe / 4.0
-
-        # r_fluid is set to r_in_convection - 3/4 * t
-        self.r_fluid = self.r_in_convection - (3.0 / 4.0 * self.thickness_pipe)
-
-        # Thicknesses of the grid regions
-        self.thickness_soil = (self.r_far_field - self.r_borehole) / self.num_soil_cells
-        self.thickness_grout = (self.r_borehole - self.r_out_tube) / self.num_grout_cells
-        # pipe thickness is equivalent to original tube thickness
-        self.thickness_conv = (self.r_in_tube - self.r_in_convection) / self.num_conv_cells
-        self.thickness_fluid = (self.r_in_convection - self.r_fluid) / self.num_fluid_cells
+        else:
+            # outer tube radius is set to sqrt(2) * r_p_o, tube region has 4 cells
+            self.r_out_tube = sqrt(2) * self.pipes_ghe.r_out + 2*self.thickness_pipe_actual
+            # inner tube radius is set to r_out_tube-t_p
+            self.r_in_tube = self.r_out_tube - 2.0 * self.thickness_pipe_actual
+            # r_in_convection is set to r_in_tube - 1/4 * t
+            self.r_in_convection = self.r_in_tube - self.thickness_pipe_actual / 2.0
+            # r_fluid is set to r_in_convection - 3/4 * t
+            self.r_fluid = self.r_in_convection - (3.0 / 2.0 * self.thickness_pipe_actual)
+            # Thicknesses of the grid regions
+            self.thickness_soil_cell = (self.r_far_field - self.r_borehole) / self.num_soil_cells
+            self.thickness_grout_cell = (self.r_borehole - self.r_out_tube) / self.num_grout_cells
+            # pipe thickness is equivalent to original tube thickness
+            self.thickness_conv_cell = (self.r_in_tube - self.r_in_convection) / self.num_conv_cells
+            self.thickness_fluid_cell = (self.r_in_convection - self.r_fluid) / self.num_fluid_cells
+            self.thickness_pipe_cell = (2*self.thickness_pipe_actual) / self.num_pipe_cells
+            ghe_logger.info(f"Double U-tube cells defined for numerical model")
 
         # other
         self.g = np.array([], dtype=np.double)
@@ -144,10 +168,7 @@ class DynamicsBH(object):
         self.g_bhw = np.array([], dtype=np.double)
         self.lntts = np.array([], dtype=np.double)
         self.c_0 = 2.0 * pi * self.ground_ghe.k_s()
-        soil_diffusivity = self.ground_ghe.k_s() / (self.ground_ghe.volumetric_heat_capacity())  # = alpha
         self.t_s = self.boreholes[0].H ** 2 / (9 * self.ground_ghe.alpha())
-        # default is at least 49 hours, or up to -8.6 log time
-        self.calc_time_in_sec = max([self.t_s * exp(-8.6), 49.0 * 3600.0])
         self.t_b = 5 * (self.boreholes[0].r_b) ** 2 / self.ground_ghe.alpha()  
         self.final_time = self.factor_time * self.t_b
         self.g_sts = None
@@ -164,7 +185,7 @@ class DynamicsBH(object):
                     9 * self.ground_ghe.alpha())  # self.t_s = single_u_tube.b.H ** 2 / (9 * soil_diffusivity)
         self.calc_time_in_sec = max([self.t_s * exp(-8.6), 49.0 * 3600.0])
 
-    def fill_radial_cell(self, radial_cell, resist_p_eq, resist_f_eq, resist_tg_eq):
+    def fill_radial_cell(self, radial_cell, resist_f_eq, resist_tg_eq):
 
         num_fluid_cells = self.num_fluid_cells
         num_conv_cells = self.num_conv_cells
@@ -176,14 +197,10 @@ class DynamicsBH(object):
 
         # load fluid cells
         for idx in range(cell_summation, num_fluid_cells + cell_summation):
-            center_radius = self.r_fluid + idx * self.thickness_fluid
-
-            if idx == 0:
-                inner_radius = center_radius
-            else:
-                inner_radius = center_radius - self.thickness_fluid / 2.0
-
-            outer_radius = center_radius + self.thickness_fluid / 2.0
+           
+            inner_radius = self.r_fluid + idx * self.thickness_fluid_cell
+            center_radius = inner_radius + self.thickness_fluid_cell / 2.0
+            outer_radius = inner_radius + self.thickness_fluid_cell
 
             # The equivalent thermal mass of the fluid can be calculated from
             # equation (2)
@@ -216,9 +233,9 @@ class DynamicsBH(object):
         # load convection cells
         for idx in range(cell_summation, num_conv_cells + cell_summation):
             j = idx - cell_summation
-            inner_radius = self.r_in_convection + j * self.thickness_conv
-            center_radius = inner_radius + self.thickness_conv / 2.0
-            outer_radius = inner_radius + self.thickness_conv
+            inner_radius = self.r_in_convection + j * self.thickness_conv_cell
+            center_radius = inner_radius + self.thickness_conv_cell / 2.0
+            outer_radius = inner_radius + self.thickness_conv_cell
             k_eq = log(self.r_in_tube / self.r_in_convection) / (2.0 * pi * resist_f_eq)
             rho_cp = 1.0
             volume = pi * (outer_radius ** 2 - inner_radius ** 2)
@@ -242,10 +259,10 @@ class DynamicsBH(object):
         # load pipe cells
         for idx in range(cell_summation, num_pipe_cells + cell_summation):
             j = idx - cell_summation
-            inner_radius = self.r_in_tube + j * self.thickness_pipe
-            center_radius = inner_radius + self.thickness_pipe / 2.0
-            outer_radius = inner_radius + self.thickness_pipe
-            conductivity = log(self.r_borehole / self.r_in_tube) / (2.0 * pi * resist_p_eq)
+            inner_radius = self.r_in_tube + j * self.thickness_pipe_cell
+            center_radius = inner_radius + self.thickness_pipe_cell / 2.0
+            outer_radius = inner_radius + self.thickness_pipe_cell
+            conductivity = log(self.r_borehole / self.r_in_tube) / (2.0 * pi * resist_tg_eq)
             # rho_cp = self.single_u_tube.pipe.rhoCp
             rho_cp = self.rho_cp_pipe
             volume = pi * (outer_radius ** 2 - inner_radius ** 2)
@@ -269,9 +286,9 @@ class DynamicsBH(object):
         # load grout cells
         for idx in range(cell_summation, num_grout_cells + cell_summation):
             j = idx - cell_summation
-            inner_radius = self.r_out_tube + j * self.thickness_grout
-            center_radius = inner_radius + self.thickness_grout / 2.0
-            outer_radius = inner_radius + self.thickness_grout
+            inner_radius = self.r_out_tube + j * self.thickness_grout_cell
+            center_radius = inner_radius + self.thickness_grout_cell / 2.0
+            outer_radius = inner_radius + self.thickness_grout_cell
             conductivity = log(self.r_borehole / self.r_in_tube) / (2.0 * pi * resist_tg_eq)
             # rho_cp = self.single_u_tube.grout.rhoCp
             rho_cp = self.rho_cp_grout
@@ -296,9 +313,9 @@ class DynamicsBH(object):
         # load soil cells
         for idx in range(cell_summation, num_soil_cells + cell_summation):
             j = idx - cell_summation
-            inner_radius = self.r_borehole + j * self.thickness_soil
-            center_radius = inner_radius + self.thickness_soil / 2.0
-            outer_radius = inner_radius + self.thickness_soil
+            inner_radius = self.r_borehole + j * self.thickness_soil_cell
+            center_radius = inner_radius + self.thickness_soil_cell / 2.0
+            outer_radius = inner_radius + self.thickness_soil_cell
             conductivity = self.ground_ghe.k_s()
             rho_cp = self.ground_ghe.volumetric_heat_capacity()
             volume = pi * (outer_radius ** 2 - inner_radius ** 2)
@@ -324,6 +341,7 @@ class DynamicsBH(object):
         self.pipe_roughness = 1e-06
         self.bh = gt.boreholes
         self.H = self.boreholes[0].H
+        print(f"Borehole lenght of current iteration is {self.H}m")
         self.r_b = self.r_borehole
         self.D = self.boreholes[0].D
         self.h_f = self.pipes_gt.convective_heat_transfer_coefficient_circular_pipe(self.m_flow_borehole,
@@ -340,14 +358,13 @@ class DynamicsBH(object):
         self.resist_bh_effective = self.borefield.Rb 
 
         # check the resistances
-        resist_f_eq = R_f / 2
-        resist_p_eq = R_p / 2
+        resist_f_eq = R_f / 2 * self.u_tube
         resist_tg_eq = self.resist_bh_effective - resist_f_eq
 
         # Pass radial cell by reference and fill here so that it can be
         # destroyed when this method returns
         radial_cell = np.zeros(shape=(len(CellProps), self.num_cells), dtype=np.double)
-        self.fill_radial_cell(radial_cell, resist_p_eq, resist_f_eq, resist_tg_eq)
+        self.fill_radial_cell(radial_cell, resist_f_eq, resist_tg_eq)
 
         self.t_b = 5 * (self.boreholes[0].r_b) ** 2 / self.ground_ghe.alpha()
 
@@ -470,7 +487,7 @@ class DynamicsBH(object):
                     ghe_logger.info(f"Perfect convergence with long-term g-function after {time/3600} hours")
                     
                 else:
-                    ghe_logger.info(f"No perfect convergence between long-term and short term g-functions, switch made after {time/3600} hours")
+                    ghe_logger.info(f"No perfect convergence between long-term and short term g-functions, switch made after {time/3600} hours with g-function difference of {stop_crit}")
                 break
             
         

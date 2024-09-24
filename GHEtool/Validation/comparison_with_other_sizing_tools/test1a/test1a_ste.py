@@ -40,10 +40,10 @@ def test_1a_6h_ste():
     # load the hourly profile
     load = HourlyGeothermalLoad(simulation_period=10)
     load.load_hourly_profile(os.path.join(os.path.dirname(__file__), 'test1a.csv'), header=True, separator=",",
-                             col_heating=1, col_cooling=0)
+                             col_extraction=1, col_injection=0)
     borefield.load = load
 
-    delta_t = max(load.max_peak_cooling, load.max_peak_cooling) * 1000 / (fluid_data.Cp * fluid_data.mfr)
+    delta_t = max(load.max_peak_extraction, load.max_peak_injection) * 1000 / (fluid_data.Cp * fluid_data.mfr)
 
     # set temperature bounds
     borefield.set_max_avg_fluid_temperature(35 + delta_t / 2)
@@ -98,7 +98,6 @@ def test_1a_6h_ste():
     }
 
     options = {'nSegments': 12,
-                   'segment_ratios': None,
                    'disp': False,
                    'profiles': True,
                    'method': 'equivalent',
@@ -182,7 +181,6 @@ def test_1a_6h_ste():
     }
 
     options = {'nSegments': 12,
-                   'segment_ratios': None,
                    'disp': False,
                    'profiles': True,
                    'method': 'equivalent',
@@ -248,11 +246,11 @@ def test_1a_1h_ste():
     # load the hourly profile
     load = HourlyGeothermalLoad(simulation_period=10)
     load.load_hourly_profile(os.path.join(os.path.dirname(__file__), 'test1a.csv'), header=True, separator=",",
-                             col_heating=1, col_cooling=0)
+                             col_extraction=1, col_injection=0)
     borefield.load = load
     borefield.load.peak_duration = 1
 
-    delta_t = max(load.max_peak_cooling, load.max_peak_cooling) * 1000 / (fluid_data.Cp * fluid_data.mfr)
+    delta_t = max(load.max_peak_injection, load.max_peak_extraction) * 1000 / (fluid_data.Cp * fluid_data.mfr)
 
     # set temperature bounds
     borefield.set_max_avg_fluid_temperature(35 + delta_t / 2)
@@ -296,7 +294,7 @@ def test_1a_1h_ste():
 
     borefield.load = load
 
-    delta_t = max(load.max_peak_cooling, load.max_peak_cooling) * 1000 / (fluid_data.Cp * fluid_data.mfr)
+    delta_t = max(load.max_peak_injection, load.max_peak_extraction) * 1000 / (fluid_data.Cp * fluid_data.mfr)
 
     # set temperature bounds
     borefield.set_max_avg_fluid_temperature(35 + delta_t / 2)
@@ -309,7 +307,6 @@ def test_1a_1h_ste():
     }
 
     options = {'nSegments': 12,
-                   'segment_ratios': None,
                    'disp': False,
                    'profiles': True,
                    'method': 'equivalent',
@@ -390,7 +387,6 @@ def test_1a_1h_ste():
     }
 
     options = {'nSegments': 12,
-                   'segment_ratios': None,
                    'disp': False,
                    'profiles': True,
                    'method': 'equivalent',
