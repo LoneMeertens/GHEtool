@@ -1,6 +1,7 @@
-import matplotlib.pyplot as plt
-import pygfunction as gt
 import pytest
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 from GHEtool import *
 
@@ -47,6 +48,26 @@ def test_multiple_ground_layers():
     from GHEtool.Examples.multiple_ground_layers import multiple_ground_layers
     multiple_ground_layers()
 
-def test_short_term_effects():
-    from GHEtool.Examples.short_term_effects import short_term_effects
-    short_term_effects()
+
+def test_sizing_with_building_load(monkeypatch):
+    monkeypatch.setattr(plt, 'show', lambda: None)
+    from GHEtool.Examples.sizing_with_building_load import size_with_scop, \
+        size_with_variable_ground_temperature, \
+        size_with_part_load_data
+    assert np.allclose(size_with_scop(), (96.5589765783911, 4.072466974615784))
+    assert np.allclose(size_with_variable_ground_temperature(), (95.63725412552411, 4.134065429053346))
+    assert np.allclose(size_with_part_load_data(), (98.12508584747407, 4.625118577257844))
+
+
+def test_sizing_with_building_load_hourly(monkeypatch):
+    monkeypatch.setattr(plt, 'show', lambda: None)
+    from GHEtool.Examples.sizing_with_building_load_hourly import L3_sizing, L4_sizing
+    assert np.allclose(L3_sizing(), (128.48637749558208, 6.288025315353533))
+    assert np.allclose(L4_sizing(), (154.34184329022935, 6.385782647864632))
+
+
+def test_combined_active_and_passive_cooling(monkeypatch):
+    monkeypatch.setattr(plt, 'show', lambda: None)
+    from GHEtool.Examples.combined_active_and_passive_cooling import active_above_threshold, default_cooling_in_summer
+    assert np.isclose(active_above_threshold(), 7483.480000000002)
+    assert np.isclose(default_cooling_in_summer(), 67683.27999999997)

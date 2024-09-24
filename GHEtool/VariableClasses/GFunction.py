@@ -9,11 +9,11 @@ from scipy import interpolate
 
 from .CustomGFunction import _time_values
 
-from GHEtool.VariableClasses.Short_term_effects import update_pygfunction_short_term_effects
-from GHEtool.VariableClasses.cylindrical_correction import update_pygfunction
+from GHEtool.VariableClasses.Cylindrical_correction import update_pygfunction
 
 # add cylindrical correction to pygfunction
 update_pygfunction()
+
 
 class FIFO:
     """
@@ -91,7 +91,7 @@ class GFunction:
 
     def __init__(self):
         self._store_previous_values: bool = GFunction.DEFAULT_STORE_PREVIOUS_VALUES
-        self._store_previous_values_backup: bool= GFunction.DEFAULT_STORE_PREVIOUS_VALUES
+        self._store_previous_values_backup: bool = GFunction.DEFAULT_STORE_PREVIOUS_VALUES
         self.options: dict = {'method': 'equivalent'}
         self.alpha: float = 0.
         self.borefield: list[gt.boreholes.Borehole] = []
@@ -100,11 +100,11 @@ class GFunction:
         self.previous_gfunctions: np.ndarray = np.array([])
         self.previous_depth: float = 0.
         self.use_cyl_correction_when_negative: bool = True
+
         self.no_extrapolation: bool = True
         self.threshold_depth_interpolation: float = .25  # %
-        self.fifo_list: FIFO = FIFO(8)
 
-     
+        self.fifo_list: FIFO = FIFO(8)
 
     @property
     def store_previous_values(self) -> bool:
@@ -183,13 +183,6 @@ class GFunction:
             gvalues : np.ndarray
                 1D array with all the requested gvalues
             """
-            include_short_term_effects = self.options.get('short_term_effects')
-            if include_short_term_effects:
-                # add short-term effects to pygfunction
-                update_pygfunction_short_term_effects()
-            else:
-                self.options["short_term_effects"] = False
-            
             # check if the value is in the fifo_list
             # if the value is in self.depth_array, there is no problem, since the interpolation will be exact anyway
             if self.fifo_list.in_fifo_list(depth) and depth not in self.depth_array:
@@ -197,7 +190,7 @@ class GFunction:
 
                 # calculate the g-values for uniform borehole wall temperature
                 gfunc_calculated = gt.gfunction.gFunction(borefield, alpha, time_values, options=self.options).gFunc
-                
+
                 # store the calculated g-values
                 self.set_new_calculated_data(time_values, depth, gfunc_calculated, borefield, alpha)
 
@@ -221,25 +214,26 @@ class GFunction:
 
             # if there are g-values calculated, return them
             if np.any(gfunc_interpolated):
-                return gfunc_interpolated            
-           
-            # calculate the g-values for uniform borehole wall temperature
-            gfunc_calculated = gt.gfunction.gFunction(borefield, alpha, time_values, options=self.options, method=self.options['method']).gFunc      
-            gfunc_calculated = np.array(gfunc_calculated)
+                return gfunc_interpolated
 
-            
-            if np.any(gfunc_calculated < 0) and self.options["short_term_effects"] == False:
+            # calculate the g-values for uniform borehole wall temperature
+            gfunc_calculated = gt.gfunction.gFunction(borefield, alpha, time_values, options=self.options,
+                                                      method=self.options['method']).gFunc
+            if np.any(gfunc_calculated < 0):
                 warnings.warn('There are negative g-values. This can be caused by a large borehole radius.')
                 if self.use_cyl_correction_when_negative:
                     # there are negative gfunction values
                     warnings.warn('Cylindrical correction is used to correct this large borehole. '
                                   'You can change this behaviour by setting the use_cyl_correction_when_negative variable '
                                   'of the Gfunction class to False.')
+
                     backup = self.options.get('Cylindrical_correction')
+
                     self.options["cylindrical_correction"] = True
-                    gfunc_calculated = gt.gfunction.gFunction(borefield, alpha, time_values, options=self.options, method=self.options['method']).gFunc
+                    gfunc_calculated = gt.gfunction.gFunction(borefield, alpha, time_values, options=self.options,
+                                                              method=self.options['method']).gFunc
                     self.options["cylindrical_correction"] = backup
-            
+
             # store the calculated g-values
             self.set_new_calculated_data(time_values, depth, gfunc_calculated, borefield, alpha)
 
