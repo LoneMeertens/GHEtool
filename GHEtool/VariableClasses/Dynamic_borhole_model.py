@@ -338,6 +338,7 @@ class DynamicsBH:
         self.H = self.boreholes[0].H
         self.r_b = self.r_borehole
         self.D = self.boreholes[0].D
+        print('in calc g funct sts')
 
         # === Convective heat transfer coefficient and resistances ===
         self.h_f = self.pipes_gt.convective_heat_transfer_coefficient_circular_pipe(
@@ -477,13 +478,14 @@ class DynamicsBH:
                 break
 
         # === Plot g-functions ===
+        """
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
         plt.tight_layout()
         ax1.plot(self.time, self.gFunc, c='b', marker='s', label='g_lt')
         ax1.plot(lntts, g, c='r', label='g_st')
         plt.legend(loc='upper left')
-
+        """
         # === Interpolation and downsampling ===
         num_intervals = 1000
         uniform_lntts_vals = np.linspace(lntts[0], lntts[-1], num_intervals)
