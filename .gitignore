@@ -137,3 +137,6 @@ GHEtool/test/unit-tests/test.gvalues
 
 # test json
 test.json
+
+# UrbanLab: large raw sample data, not tracked (exceeds GitHub's 100MB file limit)
+UrbanLab/P6269_1_50_DMK_Sample_Gas_2024.csv
